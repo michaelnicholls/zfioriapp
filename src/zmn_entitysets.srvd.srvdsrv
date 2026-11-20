@@ -1,0 +1,4 @@
+@EndUserText.label: 'service'
+define service Zmn_entitysets {
+  expose zmn_entitysets;
+}

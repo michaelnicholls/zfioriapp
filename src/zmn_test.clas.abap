@@ -62,8 +62,6 @@ CLASS ZMN_TEST IMPLEMENTATION.
               DATA(entity) = <fs_exposure>->cds_entity.
               SELECT SINGLE FROM dd02b FIELDS strucobjn_raw WHERE strucobjn = @entity INTO @DATA(camelname).
 
-              " TODO: variable is assigned but never used (ABAP cleaner)
-              DATA(lo_ddls) = xco_cds=>data_definition( entity ).
               DATA(ddls) = xco_abap_repository=>object->ddls->for( entity ).
 
               DATA(t) = ddls->get_type( ).
