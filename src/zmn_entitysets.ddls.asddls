@@ -14,7 +14,7 @@ define custom entity zmn_entitysets
  key  entityset : abap.char(30);
   @UI.lineItem: [{ position: 40 }]
   odata: abap.char(2);
-  launch_url: abap.char(300);
+  launch_url: abap.char(500);
   @UI.lineItem: [{ position: 50, type: #WITH_URL, url: 'launch_url' }]
   launch : abap.char(30);
   

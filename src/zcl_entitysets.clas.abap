@@ -120,9 +120,10 @@ CLASS ZCL_ENTITYSETS IMPLEMENTATION.
                   linecounter += 1.
                   DATA(set) = COND string( WHEN lines( params ) > 0 AND v = 'v2' THEN `Set` ELSE `` ).
                   DATA(entityset) = COND string( WHEN alias IS NOT INITIAL THEN alias ELSE camelname ).
+                  data(prompt) = |bsp=prompt("BSP app name","{ binding }_BSP");|.
                   DATA(url) = |https://michaelnicholls.github.io/simpleFiori/makeZip.html?b={ binding }&s={ service }&e={ entityset }{ set }&v={ v }&d={ desc }| &&
-                   |&i={ to_lower( lv_protocol ) }://{ lv_host }:{ lv_port }&c={ sy-mandt }  |.
-                  DATA(launch_url) = |javascript:window.open("{ url }","mypopup","popup,width=1000,height=400")|.
+                   |&i={ to_lower( lv_protocol ) }://{ lv_host }:{ lv_port }&c={ sy-mandt }&bsp=|.
+                  DATA(launch_url) = |javascript:{ prompt }window.open("{ url }"+bsp,"mypopup","popup,width=1000,height=400")|.
                   lt_data = VALUE #(
                       BASE lt_data
                       ( launch_url = launch_url launch = 'Build ZIP file'  binding = binding service = service odata = v entityset = |{ entityset }{ set }| ) ).
