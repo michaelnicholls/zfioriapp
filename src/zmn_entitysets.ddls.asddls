@@ -1,5 +1,7 @@
 @EndUserText.label: 'Customer entitysets'
 @ObjectModel.query.implementedBy: 'ABAP:ZCL_ENTITYSETS'
+@UI.headerInfo.typeNamePlural : 'Customer entity sets'
+@UI.headerInfo.typeName : 'Customer entity set'
 define custom entity zmn_entitysets
 
 {
