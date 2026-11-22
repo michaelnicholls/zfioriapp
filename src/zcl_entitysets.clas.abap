@@ -89,26 +89,31 @@ CLASS ZCL_ENTITYSETS IMPLEMENTATION.
 
                   DATA(t) = ddls->get_type( ).
                   CASE t.
-                    WHEN xco_data_definition=>type->view_entity.
-                      DATA(params) = xco_cds=>view_entity( entity )->parameters->all->get( ).
-*                WHEN xco_data_definition=>type->projection_view.
+               WHEN xco_data_definition=>type->view_entity.
+                  data(desc) =  xco_cds=>view_entity( entity )->content(  )->get_short_description(  ).
+                  data(params) = xco_cds=>view_entity( entity )->parameters->all->get(  ).
+                WHEN xco_data_definition=>type->projection_view.
+                desc   = xco_cds=>projection_view( entity )->content(  )->get_short_description(  ).
 *                  params = xco_cds=>projection_view( entity )->parameters->all->get(  ).
-                    WHEN xco_data_definition=>type->custom_entity.
-                      params = xco_cds=>custom_entity( entity )->parameters->all->get( ).
-                    WHEN xco_data_definition=>type->table_function.
-                      params = xco_cds=>table_function( entity )->parameters->all->get( ).
+                WHEN xco_data_definition=>type->custom_entity.
+                desc   = xco_cds=>custom_entity( entity )->content(  )->get_short_description(  ).
+                  params = xco_cds=>custom_entity( entity )->parameters->all->get(  ).
+                when xco_data_definition=>type->table_function.
+                desc   = xco_cds=>table_function( entity )->content(  )->get_short_description(  ).
+                  params = xco_cds=>table_function( entity )->parameters->all->get(  ).
 
-                    WHEN xco_data_definition=>type->abstract_entity.
-                      params = xco_cds=>abstract_entity( entity )->parameters->all->get( ).
+                when xco_data_definition=>type->abstract_entity.
+                desc   = xco_cds=>abstract_entity( entity )->content(  )->get_short_description(  ).
+                  params = xco_cds=>abstract_entity( entity )->parameters->all->get(  ).
 
-                    WHEN OTHERS.
-
+                WHEN OTHERS.
+                desc = 'unknown'.
                   ENDCASE.
                   linecounter += 1.
                   DATA(set) = COND string( WHEN lines( params ) > 0 AND v = 'v2' THEN `Set` ELSE `` ).
                   DATA(entityset) = COND string( WHEN alias IS NOT INITIAL THEN alias ELSE camelname ).
-                  data(url) = |https://michaelnicholls.github.io/simpleFiori/makeZip.html?b={ binding }&s={ service }&e={ entityset }{ set }&v={ v }|.
-                  DATA(launch_url) = 'javascript:window.open("' && url && '","mypopup","popup")'.
+                  data(url) = |https://michaelnicholls.github.io/simpleFiori/makeZip.html?b={ binding }&s={ service }&e={ entityset }{ set }&v={ v }&d={ desc }|.
+                  DATA(launch_url) = 'javascript:window.open("' && url && '","mypopup","popup,width=1000,height=400")'.
                   lt_data = VALUE #(
                       BASE lt_data
                       ( launch_url = launch_url launch = 'Build ZIP file'  binding = binding service = service odata = v entityset = |{ entityset }{ set }| ) ).

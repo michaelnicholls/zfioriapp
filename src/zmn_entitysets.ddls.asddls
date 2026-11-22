@@ -1,4 +1,4 @@
-@EndUserText.label: 'entitysets'
+@EndUserText.label: 'Customer entitysets'
 @ObjectModel.query.implementedBy: 'ABAP:ZCL_ENTITYSETS'
 define custom entity zmn_entitysets
 
@@ -15,4 +15,5 @@ define custom entity zmn_entitysets
   launch_url: abap.char(300);
   @UI.lineItem: [{ position: 50, type: #WITH_URL, url: 'launch_url' }]
   launch : abap.char(30);
+  
 }

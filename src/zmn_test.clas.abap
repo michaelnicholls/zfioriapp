@@ -67,23 +67,28 @@ CLASS ZMN_TEST IMPLEMENTATION.
               DATA(t) = ddls->get_type( ).
               CASE t.
                 WHEN xco_data_definition=>type->view_entity.
+                  data(desc) =  xco_cds=>view_entity( entity )->content(  )->get_short_description(  ).
                   data(params) = xco_cds=>view_entity( entity )->parameters->all->get(  ).
-*                WHEN xco_data_definition=>type->projection_view.
+                WHEN xco_data_definition=>type->projection_view.
+                desc   = xco_cds=>projection_view( entity )->content(  )->get_short_description(  ).
 *                  params = xco_cds=>projection_view( entity )->parameters->all->get(  ).
                 WHEN xco_data_definition=>type->custom_entity.
+                desc   = xco_cds=>custom_entity( entity )->content(  )->get_short_description(  ).
                   params = xco_cds=>custom_entity( entity )->parameters->all->get(  ).
                 when xco_data_definition=>type->table_function.
+                desc   = xco_cds=>table_function( entity )->content(  )->get_short_description(  ).
                   params = xco_cds=>table_function( entity )->parameters->all->get(  ).
 
                 when xco_data_definition=>type->abstract_entity.
+                desc   = xco_cds=>abstract_entity( entity )->content(  )->get_short_description(  ).
                   params = xco_cds=>abstract_entity( entity )->parameters->all->get(  ).
 
                 WHEN OTHERS.
-
+                desc = 'unknown'.
               ENDCASE.
 
               " Name of the underlying CDS Entity
-              out->write( | Binding { binding }  Service { service_name } { v } Entity { camelname } Alias { alias } { lines( params ) } | ).
+              out->write( | Binding { binding }  Service { service_name } { v } Entity { camelname } Alias { alias } { desc } { lines( params ) } | ).
             ENDLOOP.
           ENDIF.
         ENDLOOP.

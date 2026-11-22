@@ -5,7 +5,7 @@
    <DDLS>
     <DDLNAME>ZMN_ENTITYSETS</DDLNAME>
     <DDLANGUAGE>E</DDLANGUAGE>
-    <DDTEXT>entitysets</DDTEXT>
+    <DDTEXT>Customer entity sets</DDTEXT>
     <SOURCE_TYPE>Q</SOURCE_TYPE>
    </DDLS>
   </asx:values>
