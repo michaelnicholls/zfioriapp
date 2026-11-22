@@ -16,6 +16,14 @@ CLASS ZCL_ENTITYSETS IMPLEMENTATION.
     DATA lt_data TYPE TABLE OF zmn_entitysets.
 
     TRY.
+        cl_http_server=>if_http_server~get_location( EXPORTING protocol     = 'HTTPS' " Or 'HTTP'
+                                                     IMPORTING
+                                                     " TODO: variable is assigned but never used (ABAP cleaner)
+                                                               host         = DATA(lv_host)
+                                                     " TODO: variable is assigned but never used (ABAP cleaner)
+                                                               port         = DATA(lv_port)
+                                                     " TODO: variable is assigned but never used (ABAP cleaner)
+                                                               out_protocol = DATA(lv_protocol) ).
         IF io_request->is_data_requested( ).
 
           " TODO: variable is assigned but never used (ABAP cleaner)
@@ -36,7 +44,7 @@ CLASS ZCL_ENTITYSETS IMPLEMENTATION.
           DATA(lt_service_bindings) = xco_abap_repository=>objects->srvb->all->in( xco_cp_abap=>repository )->get( ).
           LOOP AT lt_service_bindings ASSIGNING FIELD-SYMBOL(<fs_service_binding>).
             DATA(binding) = <fs_service_binding>->name.
-            IF binding(1) <> 'Z' and binding(1)  <> 'Y' .
+            IF binding(1) <> 'Z' AND binding(1) <> 'Y'.
               CONTINUE.
             ENDIF.
 
@@ -89,31 +97,32 @@ CLASS ZCL_ENTITYSETS IMPLEMENTATION.
 
                   DATA(t) = ddls->get_type( ).
                   CASE t.
-               WHEN xco_data_definition=>type->view_entity.
-                  data(desc) =  xco_cds=>view_entity( entity )->content(  )->get_short_description(  ).
-                  data(params) = xco_cds=>view_entity( entity )->parameters->all->get(  ).
-                WHEN xco_data_definition=>type->projection_view.
-                desc   = xco_cds=>projection_view( entity )->content(  )->get_short_description(  ).
+                    WHEN xco_data_definition=>type->view_entity.
+                      DATA(desc) = xco_cds=>view_entity( entity )->content( )->get_short_description( ).
+                      DATA(params) = xco_cds=>view_entity( entity )->parameters->all->get( ).
+                    WHEN xco_data_definition=>type->projection_view.
+                      desc = xco_cds=>projection_view( entity )->content( )->get_short_description( ).
 *                  params = xco_cds=>projection_view( entity )->parameters->all->get(  ).
-                WHEN xco_data_definition=>type->custom_entity.
-                desc   = xco_cds=>custom_entity( entity )->content(  )->get_short_description(  ).
-                  params = xco_cds=>custom_entity( entity )->parameters->all->get(  ).
-                when xco_data_definition=>type->table_function.
-                desc   = xco_cds=>table_function( entity )->content(  )->get_short_description(  ).
-                  params = xco_cds=>table_function( entity )->parameters->all->get(  ).
+                    WHEN xco_data_definition=>type->custom_entity.
+                      desc = xco_cds=>custom_entity( entity )->content( )->get_short_description( ).
+                      params = xco_cds=>custom_entity( entity )->parameters->all->get( ).
+                    WHEN xco_data_definition=>type->table_function.
+                      desc = xco_cds=>table_function( entity )->content( )->get_short_description( ).
+                      params = xco_cds=>table_function( entity )->parameters->all->get( ).
 
-                when xco_data_definition=>type->abstract_entity.
-                desc   = xco_cds=>abstract_entity( entity )->content(  )->get_short_description(  ).
-                  params = xco_cds=>abstract_entity( entity )->parameters->all->get(  ).
+                    WHEN xco_data_definition=>type->abstract_entity.
+                      desc = xco_cds=>abstract_entity( entity )->content( )->get_short_description( ).
+                      params = xco_cds=>abstract_entity( entity )->parameters->all->get( ).
 
-                WHEN OTHERS.
-                desc = 'unknown'.
+                    WHEN OTHERS.
+                      desc = 'unknown'.
                   ENDCASE.
                   linecounter += 1.
                   DATA(set) = COND string( WHEN lines( params ) > 0 AND v = 'v2' THEN `Set` ELSE `` ).
                   DATA(entityset) = COND string( WHEN alias IS NOT INITIAL THEN alias ELSE camelname ).
-                  data(url) = |https://michaelnicholls.github.io/simpleFiori/makeZip.html?b={ binding }&s={ service }&e={ entityset }{ set }&v={ v }&d={ desc }|.
-                  DATA(launch_url) = 'javascript:window.open("' && url && '","mypopup","popup,width=1000,height=400")'.
+                  DATA(url) = |https://michaelnicholls.github.io/simpleFiori/makeZip.html?b={ binding }&s={ service }&e={ entityset }{ set }&v={ v }&d={ desc }| &&
+                   |&i={ to_lower( lv_protocol ) }://{ lv_host }:{ lv_port }&c={ sy-mandt }  |.
+                  DATA(launch_url) = |javascript:window.open("{ url }","mypopup","popup,width=1000,height=400")|.
                   lt_data = VALUE #(
                       BASE lt_data
                       ( launch_url = launch_url launch = 'Build ZIP file'  binding = binding service = service odata = v entityset = |{ entityset }{ set }| ) ).
