@@ -123,7 +123,7 @@ CLASS ZCL_ENTITYSETS IMPLEMENTATION.
                   data(prompt) = |bsp=prompt("BSP app name","{ binding }_BSP");|.
                   DATA(url) = |https://michaelnicholls.github.io/simpleFiori/makeZip.html?b={ binding }&s={ service }&e={ entityset }{ set }&v={ v }&d={ desc }| &&
                    |&i={ to_lower( lv_protocol ) }://{ lv_host }:{ lv_port }&c={ sy-mandt }&bsp=|.
-                  DATA(launch_url) = |javascript:{ prompt }window.open("{ url }"+bsp,"mypopup","popup,width=1000,height=400")|.
+                  DATA(launch_url) = |javascript:{ prompt }window.open("{ url }"+bsp,"mypopup","popup,width=1000,height=450")|.
                   lt_data = VALUE #(
                       BASE lt_data
                       ( launch_url = launch_url launch = 'Build ZIP file'  binding = binding service = service odata = v entityset = |{ entityset }{ set }| ) ).
