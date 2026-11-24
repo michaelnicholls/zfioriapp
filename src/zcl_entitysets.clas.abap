@@ -1,7 +1,6 @@
-class ZCL_ENTITYSETS definition
-  public
-  final
-  create public .
+CLASS zcl_entitysets DEFINITION
+  PUBLIC FINAL
+  CREATE PUBLIC.
 
 public section.
 INTERFACES IF_RAP_QUERY_PROVIDER.
@@ -17,12 +16,8 @@ CLASS ZCL_ENTITYSETS IMPLEMENTATION.
 
     TRY.
         cl_http_server=>if_http_server~get_location( EXPORTING protocol     = 'HTTPS' " Or 'HTTP'
-                                                     IMPORTING
-                                                     " TODO: variable is assigned but never used (ABAP cleaner)
-                                                               host         = DATA(lv_host)
-                                                     " TODO: variable is assigned but never used (ABAP cleaner)
+                                                     IMPORTING host         = DATA(lv_host)
                                                                port         = DATA(lv_port)
-                                                     " TODO: variable is assigned but never used (ABAP cleaner)
                                                                out_protocol = DATA(lv_protocol) ).
         IF io_request->is_data_requested( ).
 
@@ -38,8 +33,6 @@ CLASS ZCL_ENTITYSETS IMPLEMENTATION.
           DATA(lv_offset) = lo_paging->get_offset( ).
           " TODO: variable is assigned but never used (ABAP cleaner)
           DATA(lv_page_size) = lo_paging->get_page_size( ).
-          " TODO: variable is assigned but never used (ABAP cleaner)
-          DATA(linecounter) = 0.
 
           DATA(lt_service_bindings) = xco_abap_repository=>objects->srvb->all->in( xco_cp_abap=>repository )->get( ).
           LOOP AT lt_service_bindings ASSIGNING FIELD-SYMBOL(<fs_service_binding>).
@@ -73,8 +66,6 @@ CLASS ZCL_ENTITYSETS IMPLEMENTATION.
                   CATCH cx_root.
                     CLEAR publishedv4.
                 ENDTRY.
-                " TODO: variable is assigned but never used (ABAP cleaner)
-                DATA(lo_srvd) = xco_abap_repository=>object->srvd->for( service_name ).
                 DATA(v) = ``.
                 IF publishedv2 = abap_true.
                   v = 'v2'.
@@ -117,10 +108,9 @@ CLASS ZCL_ENTITYSETS IMPLEMENTATION.
                     WHEN OTHERS.
                       desc = 'unknown'.
                   ENDCASE.
-                  linecounter += 1.
                   DATA(set) = COND string( WHEN lines( params ) > 0 AND v = 'v2' THEN `Set` ELSE `` ).
                   DATA(entityset) = COND string( WHEN alias IS NOT INITIAL THEN alias ELSE camelname ).
-                  data(prompt) = |bsp=prompt("BSP app name","{ binding }_BSP");|.
+                  DATA(prompt) = |bsp=prompt("BSP app name","{ binding }_BSP");|.
                   DATA(url) = |https://michaelnicholls.github.io/simpleFiori/makeZip.html?b={ binding }&s={ service }&e={ entityset }{ set }&v={ v }&d={ desc }| &&
                    |&i={ to_lower( lv_protocol ) }://{ lv_host }:{ lv_port }&c={ sy-mandt }&bsp=|.
                   DATA(launch_url) = |javascript:{ prompt }window.open("{ url }"+bsp,"mypopup","popup,width=1000,height=450")|.
