@@ -8,13 +8,13 @@ class lcl_process DEFINITION.
   PUBLIC SECTION.
   methods doit
   IMPORTING template type string
-    RETURNING VALUE(content) type string..
+    RETURNING VALUE(content) type xstring..
   endclass.
   class lcl_process IMPLEMENTATION.
     method doit.
       write: / |Processing { TEMPLATE } |.
 
-      DATA: lv_url     TYPE string VALUE '/SAP/PUBLIC/zfiori/' ,
+      DATA: lv_url     TYPE string VALUE '/SAP/PUBLIC/' ,
       lv_content TYPE xstring,
       lv_mime    TYPE string,
       lo_mr_api  TYPE REF TO if_mr_api.
@@ -26,7 +26,7 @@ lo_mr_api = cl_mime_repository_api=>get_api( ).
 lo_mr_api->get(
   EXPORTING
     i_url                  = lv_url && template
-    i_check_authority      = abap_true " Set to abap_false to bypass folder auth checks
+    i_check_authority      = abap_false " Set to abap_false to bypass folder auth checks
   IMPORTING
     e_content              = lv_content
     e_mime_type            = lv_mime
@@ -38,7 +38,7 @@ lo_mr_api->get(
     OTHERS                 = 5 ).
 
 IF sy-subrc = 0.
-  " File is now stored as binary data in lv_content (XSTRING)
+  content = LV_CONTENT.
 ENDIF.
 *          DATA: lo_http_client TYPE REF TO if_http_client, " if_web_http_client for BTP
 *          lv_url         TYPE string,
@@ -130,8 +130,10 @@ data(index_html) = LO_process->DOIT( TEMPLATE = |index.html| ).
 
 data(lv_filepath) = LV_FOLDER && '\index.html'.
 
-lt_data = value #( ( |hello { sy-UZEIT } | ) ).
-split INDEX_HTML AT cl_abap_char_utilities=>newline into table lt_data.
+data(lv_string) = cl_abap_codepage=>convert_from(
+                  source   = index_html
+                  codepage = 'UTF-8' ).
+split lv_string AT cl_abap_char_utilities=>newline into table lt_data.
 
 CL_GUI_FRONTEND_SERVICES=>GUI_DOWNLOAD(
 EXPORTING FILENAME = LV_FILEPATH
