@@ -8,7 +8,7 @@ class lcl_process DEFINITION.
   PUBLIC SECTION.
   methods doit
   IMPORTING template type string
-    RETURNING VALUE(content) type xstring..
+    RETURNING VALUE(content) type string_table.
   endclass.
   class lcl_process IMPLEMENTATION.
     method doit.
@@ -38,53 +38,19 @@ lo_mr_api->get(
     OTHERS                 = 5 ).
 
 IF sy-subrc = 0.
-  content = LV_CONTENT.
+data(lv_string) = cl_abap_codepage=>convert_from(
+                  source   = LV_CONTENT
+                  codepage = 'UTF-8' ).
+split lv_string AT cl_abap_char_utilities=>newline into table CONTENT.
 ENDIF.
-*          DATA: lo_http_client TYPE REF TO if_http_client, " if_web_http_client for BTP
-*          lv_url         TYPE string,
-*          lv_body   TYPE string,
-*          lv_response    TYPE string, " comment out got BTP
-*          lv_status      TYPE i,
-*         " ls_data TYPE ty_wordle,
-*          lv_reason      TYPE string.
-*     lv_url = 'https://raw.githubusercontent.com/michaelnicholls/zfioriapp/main/' && template.
-*     cl_http_client=>create_by_url(
-*      EXPORTING
-*        url                = lv_url
-*      IMPORTING
-*        client             = lo_http_client
-*      EXCEPTIONS
-*        argument_not_found = 1
-*        plugin_not_active  = 2
-*        internal_error     = 3
-*        OTHERS             = 4 ).
-*    IF sy-subrc <> 0. RETURN. ENDIF.
-*
-*
-*    lo_http_client->request->set_method( if_http_request=>co_request_method_get ).
-*    lo_http_client->send(
-*      EXCEPTIONS
-*        http_communication_failure = 1
-*        http_invalid_state         = 2
-*        http_processing_failed     = 3
-*
-*        OTHERS                     = 4 ).
-*    IF sy-subrc <> 0. lo_http_client->close( ). RETURN. ENDIF.
-*    lo_http_client->receive(
-*"  EXCEPTIONS
-*"    http_communication_failure = 1
-* "   http_invalid_state         = 2
-*
-*  "  OTHERS                     = 3
-*   ).
-*    IF sy-subrc <> 0. lo_http_client->close( ). RETURN. ENDIF.
-*
-*    lv_response = lo_http_client->response->get_cdata( ).
-*    content = LV_RESPONSE.
-  write: / 'data received'.
       ENDMETHOD.
       ENDCLASS.
-PARAMETERS: pa_bsp type string DEFAULT 'TEST',
+PARAMETERS: binding type string DEFAULT 'Z_BINDING_XX',
+    service type string default 'Z_SERVICE',
+    entity type string LOWER CASE default 'zview_name',
+    title type string LOWER CASE default 'My app',
+    desc type string LOWER CASE default 'App description',
+    bsp type string DEFAULT 'TEST',
     pa_v2 RADIOBUTTON GROUP  v,
     pa_v4 RADIOBUTTON GROUP v DEFAULT 'X',
     pa_simpl as CHECKBOX.
@@ -93,7 +59,7 @@ data: lv_desktop type string,
 lv_rc type i,
 lt_data type STANDARD TABLE OF string.
 START-OF-SELECTION.
-if pa_bsp is initial.
+if bsp is initial.
   write: / |BSP name required|.
 else.
   try.
@@ -105,9 +71,9 @@ CHANGING DESKTOP_DIRECTORY = LV_DESKTOP
 cl_gui_cfw=>flush( ).
 data lt_folders type table of string.
 lt_folders  = value #(
-( |{ LV_DESKTOP }\\{ pa_bsp }| )
-( |{ LV_DESKTOP }\\{ pa_bsp }\\annotations| )
-( |{ LV_DESKTOP }\\{ pa_bsp }\\i18n| )
+( |{ LV_DESKTOP }\\{ bsp }| )
+( |{ LV_DESKTOP }\\{ bsp }\\annotations| )
+( |{ LV_DESKTOP }\\{ bsp }\\i18n| )
 
 ).
 loop at lt_folders into data(lv_folder).
@@ -122,26 +88,46 @@ data(v) = cond string( when pa_v2 = abap_true then 'V2' else 'V4' ).
 data(s) = cond string( when PA_SIMPL = abap_true then 'S' else '' ).
 data(lo_process) = new lcl_process( ).
 data(index_html) = LO_process->DOIT( TEMPLATE = |index.html| ).
-*data(i18n_properties) = LO_PROCESS->DOIT( TEMPLATE = |i18n.properties| ).
-*data(manifest_json) = LO_PROCESS->DOIT( TEMPLATE = |{ v }{ s }_manifest.json| ).
-*data(component_js) = LO_PROCESS->DOIT( TEMPLATE = |{ v }_Component.js| ).
-*data(annotaion_xml) = LO_PROCESS->doit( template = |{ v }_annotation.xml| ).
+write: / | index.html {  lines( index_html ) } |.
+data(i18n_properties) = LO_PROCESS->DOIT( TEMPLATE = |i18n.properties| ).
+write: / | i18n.properties {  lines( I18N_PROPERTIES ) } |.
+data(manifest_json) = LO_PROCESS->DOIT( TEMPLATE = |{ v }{ s }_manifest.json| ).
+write: / | manifest.json {  lines( MANIFEST_JSON ) } |.
+data(component_js) = LO_PROCESS->DOIT( TEMPLATE = |{ v }_Component.js| ).
+write: / | component.js {  lines( COMPONENT_JS ) } |.
+data(annotation_xml) = LO_PROCESS->doit( template = |{ v }_annotation.xml| ).
+write: / | annotation.xml {  lines( ANNOTAtION_XML ) } |.
 
 
 data(lv_filepath) = LV_FOLDER && '\index.html'.
 
-data(lv_string) = cl_abap_codepage=>convert_from(
-                  source   = index_html
-                  codepage = 'UTF-8' ).
-split lv_string AT cl_abap_char_utilities=>newline into table lt_data.
 
 CL_GUI_FRONTEND_SERVICES=>GUI_DOWNLOAD(
-EXPORTING FILENAME = LV_FILEPATH
+EXPORTING FILENAME = |{ lv_desktop }\\{ bsp }\\index.html|
   FILETYPE = 'ASC'
-  CHANGING DATA_TAB = lt_data
-"    EXCEPTIONS others = 1
+  CHANGING DATA_TAB = INDEX_HTML
  ) .
-write:  / |Files written to { pa_bsp } |.
+CL_GUI_FRONTEND_SERVICES=>GUI_DOWNLOAD(
+EXPORTING FILENAME = |{ lv_desktop }\\{ bsp }\\i18n\\i18n.propertites|
+  FILETYPE = 'ASC'
+  CHANGING DATA_TAB = I18N_PROPERTIES
+ ) .
+CL_GUI_FRONTEND_SERVICES=>GUI_DOWNLOAD(
+EXPORTING FILENAME = |{ lv_desktop }\\{ bsp }\\manifest.json|
+  FILETYPE = 'ASC'
+  CHANGING DATA_TAB = MANIFEST_JSON
+ ) .
+CL_GUI_FRONTEND_SERVICES=>GUI_DOWNLOAD(
+EXPORTING FILENAME = |{ lv_desktop }\\{ bsp }\\Component.js|
+  FILETYPE = 'ASC'
+  CHANGING DATA_TAB = COMPONENT_JS
+ ) .
+CL_GUI_FRONTEND_SERVICES=>GUI_DOWNLOAD(
+EXPORTING FILENAME = |{ lv_desktop }\\{ bsp }\\annotations\\annotation.xml|
+  FILETYPE = 'ASC'
+  CHANGING DATA_TAB = ANNOTATION_XML
+ ) .
+write:  / |Files written to { bsp } |.
  catch cx_root into data(lx_error).
     write: / |Error  writing files { LX_ERROR->GET_LONGTEXT( ) } |.
     endtry.
