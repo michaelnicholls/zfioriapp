@@ -8,6 +8,12 @@ class lcl_process DEFINITION.
   PUBLIC SECTION.
   methods doit
   IMPORTING template type string
+    appname type string
+    binding type string
+      service type string
+      entity type string
+      title type string
+      desc type string
     RETURNING VALUE(content) type string_table.
   endclass.
   class lcl_process IMPLEMENTATION.
@@ -42,10 +48,29 @@ data(lv_string) = cl_abap_codepage=>convert_from(
                   source   = LV_CONTENT
                   codepage = 'UTF-8' ).
 split lv_string AT cl_abap_char_utilities=>newline into table CONTENT.
+loop at content ASSIGNING FIELD-SYMBOL(<fs_content>).
+
+  <fs_content> = replace( val = <FS_CONTENT> sub = 'AAAAAA' with = APPNAME ).
+  <fs_content> = replace( val = <FS_CONTENT> sub = 'SSSSSS' with = SERVICE ).
+    <fs_content> = replace( val = <FS_CONTENT> sub = 'BBBBBB' with = BINDING ).
+    <fs_content> = replace( val = <FS_CONTENT> sub = 'VVVVVV' with = entity ).
+      <fs_content> =  replace( val = <FS_CONTENT> sub = 'ssssss' with = to_lower( service ) ).
+     <fs_content> =   replace( val = <FS_CONTENT> sub = 'bbbbbb' with = to_lower( binding ) ).
+     <fs_content> =   replace( val = <FS_CONTENT> sub = 'TTTTTT' with = TITLE ).
+    <fs_content> =    replace( val = <FS_CONTENT> sub = 'DDDDDD' with = DESC ).
+
+
+
+
+
+
+  endloop.
+
 ENDIF.
       ENDMETHOD.
       ENDCLASS.
-PARAMETERS: binding type string DEFAULT 'Z_BINDING_XX',
+PARAMETERS: appname type string LOWER CASE default 'zappname',
+ binding type string DEFAULT 'Z_BINDING_XX',
     service type string default 'Z_SERVICE',
     entity type string LOWER CASE default 'zview_name',
     title type string LOWER CASE default 'My app',
@@ -87,15 +112,25 @@ endloop.
 data(v) = cond string( when pa_v2 = abap_true then 'V2' else 'V4' ).
 data(s) = cond string( when PA_SIMPL = abap_true then 'S' else '' ).
 data(lo_process) = new lcl_process( ).
-data(index_html) = LO_process->DOIT( TEMPLATE = |index.html| ).
+data(index_html) = LO_process->DOIT( TEMPLATE = |index.html|
+appname = appname BINDING = binding DESC = desc entity = entity service = service title = title
+  ).
 write: / | index.html {  lines( index_html ) } |.
-data(i18n_properties) = LO_PROCESS->DOIT( TEMPLATE = |i18n.properties| ).
+data(i18n_properties) = LO_PROCESS->DOIT( TEMPLATE = |i18n.properties|
+appname = appname BINDING = binding DESC = desc entity = entity service = service title = title
+ ).
 write: / | i18n.properties {  lines( I18N_PROPERTIES ) } |.
-data(manifest_json) = LO_PROCESS->DOIT( TEMPLATE = |{ v }{ s }_manifest.json| ).
+data(manifest_json) = LO_PROCESS->DOIT( TEMPLATE = |{ v }{ s }_manifest.json|
+appname = appname BINDING = binding DESC = desc entity = entity service = service title = title
+).
 write: / | manifest.json {  lines( MANIFEST_JSON ) } |.
-data(component_js) = LO_PROCESS->DOIT( TEMPLATE = |{ v }_Component.js| ).
+data(component_js) = LO_PROCESS->DOIT( TEMPLATE = |{ v }_Component.js|
+appname = appname BINDING = binding DESC = desc entity = entity service = service title = title
+).
 write: / | component.js {  lines( COMPONENT_JS ) } |.
-data(annotation_xml) = LO_PROCESS->doit( template = |{ v }_annotation.xml| ).
+data(annotation_xml) = LO_PROCESS->doit( template = |{ v }_annotation.xml|
+appname = appname BINDING = binding DESC = desc entity = entity service = service title = title
+ ).
 write: / | annotation.xml {  lines( ANNOTAtION_XML ) } |.
 
 
