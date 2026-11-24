@@ -86,22 +86,64 @@ lv_rc type i,
 lt_data type STANDARD TABLE OF string.
 at SELECTION-SCREEN OUTPUT.
   data gt_list type vrm_values.
-  gt_list = value #(
-  (
-  Key = 'ZCALC_JS_SVC2,ZCALC_JS_SVC2,ZCALC_JSSet,v2'
-  text = 'ZCALC_JS_SVC2,ZCALC_JS_SVC2,ZCALC_JSSet,v2'
-)
-(
-Key = 'ZCALC_JS_SVC4,ZCALC_JS,ZCALC_JS,v4'
-text = 'ZCALC_JS_SVC4,ZCALC_JS,ZCALC_JS,v4'
-)
-).
+  clear gt_list.
+  try.
+    DATA(lt_service_bindings) = xco_abap_repository=>objects->srvb->all->in( xco_cp_abap=>repository )->get( ).
+          LOOP AT lt_service_bindings ASSIGNING FIELD-SYMBOL(<fs_service_binding>).
+            DATA(t_binding) = <fs_service_binding>->name.
+            IF t_binding(1) <> 'Z' AND t_binding(1) <> 'Y'.
+              CONTINUE.
+            ENDIF.
+                       DATA(lo_service_binding) = xco_abap_repository=>object->srvb->for( t_binding ).
+            " Get a list of all the services of the active version of the service binding using
+            " the default origin:
+            DATA(lt_services) = lo_service_binding->services->all->get( ).
+            LOOP AT lt_services ASSIGNING FIELD-SYMBOL(<fs_service>).
+              DATA(Service) = <fs_service>->name.
+              DATA(lt_service_versions) = xco_abap_repository=>object->srvb->for( t_binding )->service( service )->versions->all->get( ).
+              LOOP AT lt_service_versions ASSIGNING FIELD-SYMBOL(<fs_serviceversion>).
+                DATA(service_content) = <fs_serviceversion>->content( )->get( ).
+                DATA(service_name) = service_content-service_definition->name.
+
+                TRY.
+
+                    DATA(publishedv2) = xco_service_binding=>local_service_endpoint->odata_v2->is_published(
+                                            <fs_serviceversion> ).
+                  CATCH cx_root.
+                    CLEAR publishedv2.
+                ENDTRY.
+                TRY.
+                    DATA(publishedv4) = xco_service_binding=>local_service_endpoint->odata_v4->is_published(
+                                            <fs_service_binding> ).
+                  CATCH cx_root.
+                    CLEAR publishedv4.
+                ENDTRY.
+                DATA(v) = ``.
+                IF publishedv2 = abap_true.
+                  v = 'v2'.
+                ENDIF.
+                IF publishedv4 = abap_true.
+                  v = 'v4'.
+                ENDIF.
+                if v is not initial.
+                  GT_LIST = value #( base gt_list ( key = t_binding text = t_binding ) ).
+                  endif.
+                endloop.
+              endloop.
+
+  ENDLOOP.
+  catch cx_root INTO data(cx_error).
+   data(a) = CX_ERROR->GET_LONGTEXT( ).
+   data(b) = 10.
+    endtry.
+sort GT_LIST.
  call FUNCTION 'VRM_SET_VALUES'
 
  EXPORTING id = 'BINDING2' values = gt_list.
 
  at SELECTION-SCREEN.
  if sy-ucomm = 'B_SEL'.
+
    data(a) = 1.
    endif.
 START-OF-SELECTION.
