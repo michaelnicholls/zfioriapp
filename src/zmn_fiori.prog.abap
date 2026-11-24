@@ -70,7 +70,8 @@ ENDIF.
       ENDMETHOD.
       ENDCLASS.
 PARAMETERS: appname type string LOWER CASE default 'zappname',
- binding type string DEFAULT 'Z_BINDING_XX',
+ binding2 type char90  as listbox visible length 50 USER-COMMAND b_sel , "DEFAULT 'Z_BINDING_XX',
+ binding type string LOWER CASE,
     service type string default 'Z_SERVICE',
     entity type string LOWER CASE default 'zview_name',
     title type string LOWER CASE default 'My app',
@@ -83,6 +84,26 @@ data: lv_desktop type string,
 
 lv_rc type i,
 lt_data type STANDARD TABLE OF string.
+at SELECTION-SCREEN OUTPUT.
+  data gt_list type vrm_values.
+  gt_list = value #(
+  (
+  Key = 'ZCALC_JS_SVC2,ZCALC_JS_SVC2,ZCALC_JSSet,v2'
+  text = 'ZCALC_JS_SVC2,ZCALC_JS_SVC2,ZCALC_JSSet,v2'
+)
+(
+Key = 'ZCALC_JS_SVC4,ZCALC_JS,ZCALC_JS,v4'
+text = 'ZCALC_JS_SVC4,ZCALC_JS,ZCALC_JS,v4'
+)
+).
+ call FUNCTION 'VRM_SET_VALUES'
+
+ EXPORTING id = 'BINDING2' values = gt_list.
+
+ at SELECTION-SCREEN.
+ if sy-ucomm = 'B_SEL'.
+   data(a) = 1.
+   endif.
 START-OF-SELECTION.
 if bsp is initial.
   write: / |BSP name required|.
