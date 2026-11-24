@@ -14,7 +14,7 @@ class lcl_process DEFINITION.
     method doit.
       write: / |Processing { TEMPLATE } |.
 
-      DATA: lv_url     TYPE string VALUE '/SAP/PUBLIC/' ,
+      DATA: lv_url     TYPE string VALUE '/SAP/PUBLIC/zz_' ,
       lv_content TYPE xstring,
       lv_mime    TYPE string,
       lo_mr_api  TYPE REF TO if_mr_api.
