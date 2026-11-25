@@ -70,18 +70,20 @@ ENDIF.
       ENDMETHOD.
       ENDCLASS.
 PARAMETERS: appname type string LOWER CASE default 'zappname',
- binding2 type char90  as listbox visible length 50 USER-COMMAND b_sel , "DEFAULT 'Z_BINDING_XX',
- binding type string LOWER CASE,
+ binding type char30  as listbox visible length 30 USER-COMMAND b_sel , "DEFAULT 'Z_BINDING_XX',
+ "binding type string LOWER CASE,
     service type string default 'Z_SERVICE',
     entity type string LOWER CASE default 'zview_name',
     title type string LOWER CASE default 'My app',
     desc type string LOWER CASE default 'App description',
-    bsp type string DEFAULT 'TEST',
+  "  appname type string DEFAULT 'TEST',
     pa_v2 RADIOBUTTON GROUP  v,
     pa_v4 RADIOBUTTON GROUP v DEFAULT 'X',
     pa_simpl as CHECKBOX.
 data: lv_desktop type string,
-
+lv_binding type string,
+lv_service type string,
+lv_entity type string,
 lv_rc type i,
 lt_data type STANDARD TABLE OF string.
 at SELECTION-SCREEN OUTPUT.
@@ -126,7 +128,7 @@ at SELECTION-SCREEN OUTPUT.
                   v = 'v4'.
                 ENDIF.
                 if v is not initial.
-                  GT_LIST = value #( base gt_list ( key = t_binding text = t_binding ) ).
+                  GT_LIST = value #( base gt_list ( key =  |{ t_binding } - { v } | text = |{ t_binding } - { v } | ) ).
                   endif.
                 endloop.
               endloop.
@@ -139,16 +141,17 @@ at SELECTION-SCREEN OUTPUT.
 sort GT_LIST.
  call FUNCTION 'VRM_SET_VALUES'
 
- EXPORTING id = 'BINDING2' values = gt_list.
+ EXPORTING id = 'BINDING' values = gt_list.
 
  at SELECTION-SCREEN.
  if sy-ucomm = 'B_SEL'.
-
+  lv_binding = substring_before( val = binding sub = ` ` ).
+  data(v) = substring_after( val = BINDING sub = `- ` ).
    data(a) = 1.
    endif.
 START-OF-SELECTION.
-if bsp is initial.
-  write: / |BSP name required|.
+if appname is initial.
+  write: / |Application name required|.
 else.
   try.
 CL_GUI_FRONTEND_SERVICES=>GET_DESKTOP_DIRECTORY(
@@ -159,9 +162,9 @@ CHANGING DESKTOP_DIRECTORY = LV_DESKTOP
 cl_gui_cfw=>flush( ).
 data lt_folders type table of string.
 lt_folders  = value #(
-( |{ LV_DESKTOP }\\{ bsp }| )
-( |{ LV_DESKTOP }\\{ bsp }\\annotations| )
-( |{ LV_DESKTOP }\\{ bsp }\\i18n| )
+( |{ LV_DESKTOP }\\{ appname }| )
+( |{ LV_DESKTOP }\\{ appname }\\annotations| )
+( |{ LV_DESKTOP }\\{ appname }\\i18n| )
 
 ).
 loop at lt_folders into data(lv_folder).
@@ -176,23 +179,23 @@ data(v) = cond string( when pa_v2 = abap_true then 'V2' else 'V4' ).
 data(s) = cond string( when PA_SIMPL = abap_true then 'S' else '' ).
 data(lo_process) = new lcl_process( ).
 data(index_html) = LO_process->DOIT( TEMPLATE = |index.html|
-appname = appname BINDING = binding DESC = desc entity = entity service = service title = title
+appname = appname BINDING = lv_binding DESC = desc entity = lv_entity service = lv_service title = title
   ).
 write: / | index.html {  lines( index_html ) } |.
 data(i18n_properties) = LO_PROCESS->DOIT( TEMPLATE = |i18n.properties|
-appname = appname BINDING = binding DESC = desc entity = entity service = service title = title
+appname = appname BINDING = lv_binding DESC = desc entity = lv_entity service = lv_service title = title
  ).
 write: / | i18n.properties {  lines( I18N_PROPERTIES ) } |.
 data(manifest_json) = LO_PROCESS->DOIT( TEMPLATE = |{ v }{ s }_manifest.json|
-appname = appname BINDING = binding DESC = desc entity = entity service = service title = title
+appname = appname BINDING = lv_binding DESC = desc entity = lv_entity service = lv_service title = title
 ).
 write: / | manifest.json {  lines( MANIFEST_JSON ) } |.
 data(component_js) = LO_PROCESS->DOIT( TEMPLATE = |{ v }_Component.js|
-appname = appname BINDING = binding DESC = desc entity = entity service = service title = title
+appname = appname BINDING = lv_binding DESC = desc entity = lv_entity service = lv_service title = title
 ).
 write: / | component.js {  lines( COMPONENT_JS ) } |.
 data(annotation_xml) = LO_PROCESS->doit( template = |{ v }_annotation.xml|
-appname = appname BINDING = binding DESC = desc entity = entity service = service title = title
+appname = appname BINDING = lv_binding DESC = desc entity = lv_entity service = lv_service title = title
  ).
 write: / | annotation.xml {  lines( ANNOTAtION_XML ) } |.
 
@@ -201,31 +204,31 @@ data(lv_filepath) = LV_FOLDER && '\index.html'.
 
 
 CL_GUI_FRONTEND_SERVICES=>GUI_DOWNLOAD(
-EXPORTING FILENAME = |{ lv_desktop }\\{ bsp }\\index.html|
+EXPORTING FILENAME = |{ lv_desktop }\\{ appname }\\index.html|
   FILETYPE = 'ASC'
   CHANGING DATA_TAB = INDEX_HTML
  ) .
 CL_GUI_FRONTEND_SERVICES=>GUI_DOWNLOAD(
-EXPORTING FILENAME = |{ lv_desktop }\\{ bsp }\\i18n\\i18n.propertites|
+EXPORTING FILENAME = |{ lv_desktop }\\{ appname }\\i18n\\i18n.propertites|
   FILETYPE = 'ASC'
   CHANGING DATA_TAB = I18N_PROPERTIES
  ) .
 CL_GUI_FRONTEND_SERVICES=>GUI_DOWNLOAD(
-EXPORTING FILENAME = |{ lv_desktop }\\{ bsp }\\manifest.json|
+EXPORTING FILENAME = |{ lv_desktop }\\{ appname }\\manifest.json|
   FILETYPE = 'ASC'
   CHANGING DATA_TAB = MANIFEST_JSON
  ) .
 CL_GUI_FRONTEND_SERVICES=>GUI_DOWNLOAD(
-EXPORTING FILENAME = |{ lv_desktop }\\{ bsp }\\Component.js|
+EXPORTING FILENAME = |{ lv_desktop }\\{ appname }\\Component.js|
   FILETYPE = 'ASC'
   CHANGING DATA_TAB = COMPONENT_JS
  ) .
 CL_GUI_FRONTEND_SERVICES=>GUI_DOWNLOAD(
-EXPORTING FILENAME = |{ lv_desktop }\\{ bsp }\\annotations\\annotation.xml|
+EXPORTING FILENAME = |{ lv_desktop }\\{ appname }\\annotations\\annotation.xml|
   FILETYPE = 'ASC'
   CHANGING DATA_TAB = ANNOTATION_XML
  ) .
-write:  / |Files written to { bsp } |.
+write:  / |Files written to { appname } |.
  catch cx_root into data(lx_error).
     write: / |Error  writing files { LX_ERROR->GET_LONGTEXT( ) } |.
     endtry.
