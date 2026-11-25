@@ -12,8 +12,44 @@
    <TPOOL>
     <item>
      <ID>R</ID>
-     <ENTRY>fiori app</ENTRY>
-     <LENGTH>9</LENGTH>
+     <ENTRY>Build Fiori app and download</ENTRY>
+     <LENGTH>28</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
+     <KEY>APPNAME</KEY>
+     <ENTRY>Fiori app name</ENTRY>
+     <LENGTH>22</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
+     <KEY>BINDING</KEY>
+     <ENTRY>Binding name</ENTRY>
+     <LENGTH>20</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
+     <KEY>DESC</KEY>
+     <ENTRY>Application description</ENTRY>
+     <LENGTH>31</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
+     <KEY>ENTITY</KEY>
+     <ENTRY>CDS entity</ENTRY>
+     <LENGTH>18</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
+     <KEY>PA_SIMPL</KEY>
+     <ENTRY>Simple list report</ENTRY>
+     <LENGTH>26</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
+     <KEY>TITLE</KEY>
+     <ENTRY>Application title</ENTRY>
+     <LENGTH>25</LENGTH>
     </item>
    </TPOOL>
   </asx:values>

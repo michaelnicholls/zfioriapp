@@ -70,25 +70,32 @@ ENDIF.
       ENDMETHOD.
       ENDCLASS.
 PARAMETERS: appname type string LOWER CASE default 'zappname',
- binding type char30  as listbox visible length 30 USER-COMMAND b_sel , "DEFAULT 'Z_BINDING_XX',
+ binding type char30  as listbox visible length 30  USER-COMMAND b_sel , "DEFAULT 'Z_BINDING_XX',
  "binding type string LOWER CASE,
-    service type string default 'Z_SERVICE',
-    entity type string LOWER CASE default 'zview_name',
+  "  service type string default 'Z_SERVICE',
+    entity type char60  as listbox visible length 60 LOWER CASE,
     title type string LOWER CASE default 'My app',
     desc type string LOWER CASE default 'App description',
   "  appname type string DEFAULT 'TEST',
-    pa_v2 RADIOBUTTON GROUP  v,
-    pa_v4 RADIOBUTTON GROUP v DEFAULT 'X',
+  "  pa_v2 RADIOBUTTON GROUP  v,
+  "  pa_v4 RADIOBUTTON GROUP v DEFAULT 'X',
     pa_simpl as CHECKBOX.
 data: lv_desktop type string,
 lv_binding type string,
 lv_service type string,
 lv_entity type string,
+lv_version type string,
 lv_rc type i,
-lt_data type STANDARD TABLE OF string.
-at SELECTION-SCREEN OUTPUT.
+lt_data type STANDARD TABLE OF string,
+lt_entitysets type table of zmn_entitysets.
   data gt_list type vrm_values.
+data gt_elist type vrm_values.
+at SELECTION-SCREEN OUTPUT.
   clear gt_list.
+
+  clear gt_elist.
+
+  clear LT_ENTITYSETS.
   try.
     DATA(lt_service_bindings) = xco_abap_repository=>objects->srvb->all->in( xco_cp_abap=>repository )->get( ).
           LOOP AT lt_service_bindings ASSIGNING FIELD-SYMBOL(<fs_service_binding>).
@@ -122,13 +129,60 @@ at SELECTION-SCREEN OUTPUT.
                 ENDTRY.
                 DATA(v) = ``.
                 IF publishedv2 = abap_true.
-                  v = 'v2'.
+                  v = 'V2'.
                 ENDIF.
                 IF publishedv4 = abap_true.
-                  v = 'v4'.
+                  v = 'V4'.
                 ENDIF.
                 if v is not initial.
                   GT_LIST = value #( base gt_list ( key =  |{ t_binding } - { v } | text = |{ t_binding } - { v } | ) ).
+                                 DATA(ls_srvd_exposurers) = xco_abap_repository=>object->srvd->for( service_name )->exposures->all->get( ).
+
+                LOOP AT ls_srvd_exposurers ASSIGNING FIELD-SYMBOL(<fs_exposure>).
+                  DATA(alias) = <fs_exposure>->content( )->get_alias( ).
+                  DATA(entity) = <fs_exposure>->cds_entity.
+                  SELECT SINGLE FROM dd02b FIELDS strucobjn_raw WHERE strucobjn = @entity INTO @DATA(camelname).
+
+                  DATA(ddls) = xco_abap_repository=>object->ddls->for( entity ).
+
+                  DATA(t) = ddls->get_type( ).
+                  CASE t.
+                    WHEN xco_data_definition=>type->view_entity.
+                      DATA(desc) = xco_cds=>view_entity( entity )->content( )->get_short_description( ).
+                      DATA(params) = xco_cds=>view_entity( entity )->parameters->all->get( ).
+                    WHEN xco_data_definition=>type->projection_view.
+                      desc = xco_cds=>projection_view( entity )->content( )->get_short_description( ).
+*                  params = xco_cds=>projection_view( entity )->parameters->all->get(  ).
+                    WHEN xco_data_definition=>type->custom_entity.
+                      desc = xco_cds=>custom_entity( entity )->content( )->get_short_description( ).
+                      params = xco_cds=>custom_entity( entity )->parameters->all->get( ).
+                    WHEN xco_data_definition=>type->table_function.
+                      desc = xco_cds=>table_function( entity )->content( )->get_short_description( ).
+                      params = xco_cds=>table_function( entity )->parameters->all->get( ).
+
+                    WHEN xco_data_definition=>type->abstract_entity.
+                      desc = xco_cds=>abstract_entity( entity )->content( )->get_short_description( ).
+                      params = xco_cds=>abstract_entity( entity )->parameters->all->get( ).
+
+                    WHEN OTHERS.
+                      desc = 'unknown'.
+                  ENDCASE.
+                  DATA(set) = COND string( WHEN lines( params ) > 0 AND v = 'V2' THEN `Set` ELSE `` ).
+                  DATA(entityset) = COND string( WHEN alias IS NOT INITIAL THEN alias ELSE camelname ).
+*                  DATA(prompt) = |bsp=prompt("BSP app name","{ binding }_BSP");|.
+*                  DATA(url) = |https://michaelnicholls.github.io/simpleFiori/makeZip.html?b={ binding }&s={ service }&e={ entityset }{ set }&v={ v }&d={ desc }| &&
+*                   |&i={ to_lower( lv_protocol ) }://{ lv_host }:{ lv_port }&c={ sy-mandt }&bsp=|.
+*                  DATA(launch_url) = |javascript:{ prompt }window.open("{ url }"+bsp,"mypopup","popup,width=1000,height=450")|.
+                  LT_ENTItysets = VALUE #(
+                      BASE LT_Entitysets
+                      (
+                       binding = T_BINDING
+                        service = service
+                         odata = v
+                         entityset = |{ entityset }{ set }| ) ).
+    "            ENDLOOP.
+              ENDLOOP.
+
                   endif.
                 endloop.
               endloop.
@@ -144,14 +198,29 @@ sort GT_LIST.
  EXPORTING id = 'BINDING' values = gt_list.
 
  at SELECTION-SCREEN.
- if sy-ucomm = 'B_SEL'.
   lv_binding = substring_before( val = binding sub = ` ` ).
-  data(v) = substring_after( val = BINDING sub = `- ` ).
+  lv_version = substring_after( val = BINDING sub = `- ` ).
+ if sy-ucomm = 'B_SEL'.
+  clear entity.
+
+
+  clear gt_elist.
+   loop at LT_ENTITYSETS into data(lv_entityset) where binding = lv_binding.
+     gt_elist = value #( base gt_elist (
+     key = |{ lv_entityset-service }/{ LV_ENTITYSET-entityset }|
+      text = |{ lv_entityset-service }/{ LV_ENTITYSET-entityset } | ) ).
+     endloop.
+     call FUNCTION 'VRM_SET_VALUES'
+
+ EXPORTING id = 'ENTITY' values = gt_elist.
+
    data(a) = 1.
    endif.
 START-OF-SELECTION.
-if appname is initial.
-  write: / |Application name required|.
+lv_entity = substring_before( val = entity sub = `/` ).
+lv_service = substring_after( val = ENTITY sub = `/` ).
+if appname is initial or binding is initial or lv_service is initial.
+  write: / |Application name, binding, service, and entity set are required|.
 else.
   try.
 CL_GUI_FRONTEND_SERVICES=>GET_DESKTOP_DIRECTORY(
@@ -175,7 +244,7 @@ EXPORTING DIRECTORY = lv_folder
       OTHERS = 2
     ).
 endloop.
-data(v) = cond string( when pa_v2 = abap_true then 'V2' else 'V4' ).
+"data(v) = cond string( when pa_v2 = abap_true then 'V2' else 'V4' ).
 data(s) = cond string( when PA_SIMPL = abap_true then 'S' else '' ).
 data(lo_process) = new lcl_process( ).
 data(index_html) = LO_process->DOIT( TEMPLATE = |index.html|
@@ -186,15 +255,15 @@ data(i18n_properties) = LO_PROCESS->DOIT( TEMPLATE = |i18n.properties|
 appname = appname BINDING = lv_binding DESC = desc entity = lv_entity service = lv_service title = title
  ).
 write: / | i18n.properties {  lines( I18N_PROPERTIES ) } |.
-data(manifest_json) = LO_PROCESS->DOIT( TEMPLATE = |{ v }{ s }_manifest.json|
+data(manifest_json) = LO_PROCESS->DOIT( TEMPLATE = |{ lv_version }{ s }_manifest.json|
 appname = appname BINDING = lv_binding DESC = desc entity = lv_entity service = lv_service title = title
 ).
 write: / | manifest.json {  lines( MANIFEST_JSON ) } |.
-data(component_js) = LO_PROCESS->DOIT( TEMPLATE = |{ v }_Component.js|
+data(component_js) = LO_PROCESS->DOIT( TEMPLATE = |{ lv_version }_Component.js|
 appname = appname BINDING = lv_binding DESC = desc entity = lv_entity service = lv_service title = title
 ).
 write: / | component.js {  lines( COMPONENT_JS ) } |.
-data(annotation_xml) = LO_PROCESS->doit( template = |{ v }_annotation.xml|
+data(annotation_xml) = LO_PROCESS->doit( template = |{ lv_version }_annotation.xml|
 appname = appname BINDING = lv_binding DESC = desc entity = lv_entity service = lv_service title = title
  ).
 write: / | annotation.xml {  lines( ANNOTAtION_XML ) } |.
@@ -228,7 +297,10 @@ EXPORTING FILENAME = |{ lv_desktop }\\{ appname }\\annotations\\annotation.xml|
   FILETYPE = 'ASC'
   CHANGING DATA_TAB = ANNOTATION_XML
  ) .
-write:  / |Files written to { appname } |.
+  uline.
+
+write:  / |Files written to the { appname } folder on your Desktop |.
+  write : / |You can now use SA38 to run /UI5/UI5_REPOSITORY_LOAD to upload a Fiori BSP app from that folder |.
  catch cx_root into data(lx_error).
     write: / |Error  writing files { LX_ERROR->GET_LONGTEXT( ) } |.
     endtry.
