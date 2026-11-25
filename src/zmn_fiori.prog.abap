@@ -298,11 +298,20 @@ EXPORTING FILENAME = |{ lv_desktop }\\{ appname }\\annotations\\annotation.xml|
   CHANGING DATA_TAB = ANNOTATION_XML
  ) .
   uline.
-
+data(sa38) = 'SA38'.
 write:  / |Files written to the { appname } folder on your Desktop |.
-  write : / |You can now use SA38 to run /UI5/UI5_REPOSITORY_LOAD to upload a Fiori BSP app from that folder |.
+  write : / |You can now use |.
+  write :  sa38 HOTSPOT on COLOR COL_POSITIVE.
+  write: | to run /UI5/UI5_REPOSITORY_LOAD to upload a Fiori BSP app from that folder |.
  catch cx_root into data(lx_error).
     write: / |Error  writing files { LX_ERROR->GET_LONGTEXT( ) } |.
     endtry.
 
 endif.
+AT LINE-SELECTION.
+  data lv_fieldname type string.
+  get CURSOR FIELD lv_fieldname.
+  if lv_fieldname = 'SA38'.
+    data(bsp) = |{ appname }_bsp|.
+    SUBMIT /ui5/ui5_repository_load with ui5rep = bsp via SELECTION-SCREEN.
+    endif.
