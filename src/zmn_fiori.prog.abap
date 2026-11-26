@@ -70,16 +70,13 @@ ENDIF.
       ENDMETHOD.
       ENDCLASS.
 PARAMETERS: appname type string LOWER CASE default 'zappname',
- binding type char30  as listbox visible length 30  USER-COMMAND b_sel , "DEFAULT 'Z_BINDING_XX',
- "binding type string LOWER CASE,
-  "  service type string default 'Z_SERVICE',
+binding type char30  as listbox visible length 30  USER-COMMAND b_sel , "DEFAULT 'Z_BINDING_XX',
+
     entity type char60  as listbox visible length 60 LOWER CASE,
     title type string LOWER CASE default 'My app',
     desc type string LOWER CASE default 'App description',
-  "  appname type string DEFAULT 'TEST',
-  "  pa_v2 RADIOBUTTON GROUP  v,
-  "  pa_v4 RADIOBUTTON GROUP v DEFAULT 'X',
     pa_simpl as CHECKBOX.
+
 data: lv_desktop type string,
 lv_binding type string,
 lv_service type string,
@@ -90,112 +87,117 @@ lt_data type STANDARD TABLE OF string,
 lt_entitysets type table of zmn_entitysets.
   data gt_list type vrm_values.
 data gt_elist type vrm_values.
-at SELECTION-SCREEN OUTPUT.
-  clear gt_list.
 
-  clear gt_elist.
+AT SELECTION-SCREEN OUTPUT.
+  CLEAR gt_list.
 
-  clear LT_ENTITYSETS.
-  try.
-    DATA(lt_service_bindings) = xco_abap_repository=>objects->srvb->all->in( xco_cp_abap=>repository )->get( ).
-          LOOP AT lt_service_bindings ASSIGNING FIELD-SYMBOL(<fs_service_binding>).
-            DATA(t_binding) = <fs_service_binding>->name.
-            IF t_binding(1) <> 'Z' AND t_binding(1) <> 'Y'.
+  CLEAR gt_elist.
+
+  CLEAR lt_entitysets.
+  TRY.
+      DATA(lt_service_bindings) = xco_abap_repository=>objects->srvb->all->in( xco_cp_abap=>repository )->get( ).
+      LOOP AT lt_service_bindings ASSIGNING FIELD-SYMBOL(<fs_service_binding>).
+        DATA(t_binding) = <fs_service_binding>->name.
+        IF t_binding(1) <> 'Z' AND t_binding(1) <> 'Y'.
+          CONTINUE.
+        ENDIF.
+        DATA(lo_service_binding) = xco_abap_repository=>object->srvb->for( t_binding ).
+        " Get a list of all the services of the active version of the service binding using
+        " the default origin:
+        DATA(lt_services) = lo_service_binding->services->all->get( ).
+        LOOP AT lt_services ASSIGNING FIELD-SYMBOL(<fs_service>).
+          DATA(Service) = <fs_service>->name.
+          DATA(lt_service_versions) = xco_abap_repository=>object->srvb->for( t_binding )->service( service )->versions->all->get( ).
+          LOOP AT lt_service_versions ASSIGNING FIELD-SYMBOL(<fs_serviceversion>).
+            DATA(service_content) = <fs_serviceversion>->content( )->get( ).
+            DATA(service_name) = service_content-service_definition->name.
+
+            TRY.
+
+                DATA(publishedv2) = xco_service_binding=>local_service_endpoint->odata_v2->is_published(
+                                        <fs_serviceversion> ).
+              CATCH cx_root.
+                CLEAR publishedv2.
+            ENDTRY.
+            TRY.
+                DATA(publishedv4) = xco_service_binding=>local_service_endpoint->odata_v4->is_published(
+                                        <fs_service_binding> ).
+              CATCH cx_root.
+                CLEAR publishedv4.
+            ENDTRY.
+            DATA(v) = ``.
+            IF publishedv2 = abap_true.
+              v = 'V2'.
+            ENDIF.
+            IF publishedv4 = abap_true.
+              v = 'V4'.
+            ENDIF.
+            IF v IS INITIAL.
               CONTINUE.
             ENDIF.
-                       DATA(lo_service_binding) = xco_abap_repository=>object->srvb->for( t_binding ).
-            " Get a list of all the services of the active version of the service binding using
-            " the default origin:
-            DATA(lt_services) = lo_service_binding->services->all->get( ).
-            LOOP AT lt_services ASSIGNING FIELD-SYMBOL(<fs_service>).
-              DATA(Service) = <fs_service>->name.
-              DATA(lt_service_versions) = xco_abap_repository=>object->srvb->for( t_binding )->service( service )->versions->all->get( ).
-              LOOP AT lt_service_versions ASSIGNING FIELD-SYMBOL(<fs_serviceversion>).
-                DATA(service_content) = <fs_serviceversion>->content( )->get( ).
-                DATA(service_name) = service_content-service_definition->name.
 
-                TRY.
+            gt_list = VALUE #( BASE gt_list
+                               ( key =  |{ t_binding } - { v } | text = |{ t_binding } - { v } | ) ).
+            DATA(ls_srvd_exposurers) = xco_abap_repository=>object->srvd->for( service_name )->exposures->all->get( ).
 
-                    DATA(publishedv2) = xco_service_binding=>local_service_endpoint->odata_v2->is_published(
-                                            <fs_serviceversion> ).
-                  CATCH cx_root.
-                    CLEAR publishedv2.
-                ENDTRY.
-                TRY.
-                    DATA(publishedv4) = xco_service_binding=>local_service_endpoint->odata_v4->is_published(
-                                            <fs_service_binding> ).
-                  CATCH cx_root.
-                    CLEAR publishedv4.
-                ENDTRY.
-                DATA(v) = ``.
-                IF publishedv2 = abap_true.
-                  v = 'V2'.
-                ENDIF.
-                IF publishedv4 = abap_true.
-                  v = 'V4'.
-                ENDIF.
-                if v is not initial.
-                  GT_LIST = value #( base gt_list ( key =  |{ t_binding } - { v } | text = |{ t_binding } - { v } | ) ).
-                                 DATA(ls_srvd_exposurers) = xco_abap_repository=>object->srvd->for( service_name )->exposures->all->get( ).
+            LOOP AT ls_srvd_exposurers ASSIGNING FIELD-SYMBOL(<fs_exposure>).
+              DATA(alias) = <fs_exposure>->content( )->get_alias( ).
+              DATA(entity) = <fs_exposure>->cds_entity.
+              SELECT SINGLE FROM dd02b FIELDS strucobjn_raw WHERE strucobjn = @entity INTO @DATA(camelname).
 
-                LOOP AT ls_srvd_exposurers ASSIGNING FIELD-SYMBOL(<fs_exposure>).
-                  DATA(alias) = <fs_exposure>->content( )->get_alias( ).
-                  DATA(entity) = <fs_exposure>->cds_entity.
-                  SELECT SINGLE FROM dd02b FIELDS strucobjn_raw WHERE strucobjn = @entity INTO @DATA(camelname).
+              DATA(ddls) = xco_abap_repository=>object->ddls->for( entity ).
 
-                  DATA(ddls) = xco_abap_repository=>object->ddls->for( entity ).
-
-                  DATA(t) = ddls->get_type( ).
-                  CASE t.
-                    WHEN xco_data_definition=>type->view_entity.
-                      DATA(desc) = xco_cds=>view_entity( entity )->content( )->get_short_description( ).
-                      DATA(params) = xco_cds=>view_entity( entity )->parameters->all->get( ).
-                    WHEN xco_data_definition=>type->projection_view.
-                      desc = xco_cds=>projection_view( entity )->content( )->get_short_description( ).
+              DATA(t) = ddls->get_type( ).
+              CASE t.
+                WHEN xco_data_definition=>type->view_entity.
+                  " TODO: variable is assigned but never used (ABAP cleaner)
+                  DATA(desc) = xco_cds=>view_entity( entity )->content( )->get_short_description( ).
+                  DATA(params) = xco_cds=>view_entity( entity )->parameters->all->get( ).
+                WHEN xco_data_definition=>type->projection_view.
+                  desc = xco_cds=>projection_view( entity )->content( )->get_short_description( ).
 *                  params = xco_cds=>projection_view( entity )->parameters->all->get(  ).
-                    WHEN xco_data_definition=>type->custom_entity.
-                      desc = xco_cds=>custom_entity( entity )->content( )->get_short_description( ).
-                      params = xco_cds=>custom_entity( entity )->parameters->all->get( ).
-                    WHEN xco_data_definition=>type->table_function.
-                      desc = xco_cds=>table_function( entity )->content( )->get_short_description( ).
-                      params = xco_cds=>table_function( entity )->parameters->all->get( ).
+                WHEN xco_data_definition=>type->custom_entity.
+                  desc = xco_cds=>custom_entity( entity )->content( )->get_short_description( ).
+                  params = xco_cds=>custom_entity( entity )->parameters->all->get( ).
+                WHEN xco_data_definition=>type->table_function.
+                  desc = xco_cds=>table_function( entity )->content( )->get_short_description( ).
+                  params = xco_cds=>table_function( entity )->parameters->all->get( ).
 
-                    WHEN xco_data_definition=>type->abstract_entity.
-                      desc = xco_cds=>abstract_entity( entity )->content( )->get_short_description( ).
-                      params = xco_cds=>abstract_entity( entity )->parameters->all->get( ).
+                WHEN xco_data_definition=>type->abstract_entity.
+                  desc = xco_cds=>abstract_entity( entity )->content( )->get_short_description( ).
+                  params = xco_cds=>abstract_entity( entity )->parameters->all->get( ).
 
-                    WHEN OTHERS.
-                      desc = 'unknown'.
-                  ENDCASE.
-                  DATA(set) = COND string( WHEN lines( params ) > 0 AND v = 'V2' THEN `Set` ELSE `` ).
-                  DATA(entityset) = COND string( WHEN alias IS NOT INITIAL THEN alias ELSE camelname ).
+                WHEN OTHERS.
+                  desc = 'unknown'.
+              ENDCASE.
+              DATA(set) = COND string( WHEN lines( params ) > 0 AND v = 'V2' THEN `Set` ELSE `` ).
+              DATA(entityset) = COND string( WHEN alias IS NOT INITIAL THEN alias ELSE camelname ).
 *                  DATA(prompt) = |bsp=prompt("BSP app name","{ binding }_BSP");|.
 *                  DATA(url) = |https://michaelnicholls.github.io/simpleFiori/makeZip.html?b={ binding }&s={ service }&e={ entityset }{ set }&v={ v }&d={ desc }| &&
 *                   |&i={ to_lower( lv_protocol ) }://{ lv_host }:{ lv_port }&c={ sy-mandt }&bsp=|.
 *                  DATA(launch_url) = |javascript:{ prompt }window.open("{ url }"+bsp,"mypopup","popup,width=1000,height=450")|.
-                  LT_ENTItysets = VALUE #(
-                      BASE LT_Entitysets
-                      (
-                       binding = T_BINDING
-                        service = service
-                         odata = v
-                         entityset = |{ entityset }{ set }| ) ).
-    "            ENDLOOP.
-              ENDLOOP.
+              LT_ENTItysets = VALUE #( BASE LT_Entitysets
+                                       ( binding   = t_binding
+                                         service   = service
+                                         odata     = v
+                                         entityset = |{ entityset }{ set }| ) ).
+              "            ENDLOOP.
+            ENDLOOP.
+          ENDLOOP.
+        ENDLOOP.
 
-                  endif.
-                endloop.
-              endloop.
+      ENDLOOP.
+    CATCH cx_root INTO DATA(cx_error).
+      " TODO: variable is assigned but never used (ABAP cleaner)
+      DATA(a) = cx_error->get_longtext( ).
+      " TODO: variable is assigned but never used (ABAP cleaner)
+      DATA(b) = 10.
+  ENDTRY.
+  SORT gt_list.
+  CALL FUNCTION 'VRM_SET_VALUES'
 
-  ENDLOOP.
-  catch cx_root INTO data(cx_error).
-   data(a) = CX_ERROR->GET_LONGTEXT( ).
-   data(b) = 10.
-    endtry.
-sort GT_LIST.
- call FUNCTION 'VRM_SET_VALUES'
-
- EXPORTING id = 'BINDING' values = gt_list.
+    EXPORTING id     = 'BINDING'
+              values = gt_list.
 
  at SELECTION-SCREEN.
   lv_binding = substring_before( val = binding sub = ` ` ).
@@ -299,19 +301,37 @@ EXPORTING FILENAME = |{ lv_desktop }\\{ appname }\\annotations\\annotation.xml|
  ) .
   uline.
 data(sa38) = 'SA38'.
+data(catalog) = 'Technical catalog'.
+data(pfcg) = 'PFCG'.
 write:  / |Files written to the { appname } folder on your Desktop |.
   write : / |You can now use |.
   write :  sa38 HOTSPOT on COLOR COL_POSITIVE.
   write: | to run /UI5/UI5_REPOSITORY_LOAD to upload a Fiori BSP app from that folder |.
+  write: / |You then need to add the app to a |.
+  write: catalog hotspot on color col_positive.
+   write: / |And add the technical catalog to a role using |.
+  write: pfcg hotspot on color col_positive.
  catch cx_root into data(lx_error).
     write: / |Error  writing files { LX_ERROR->GET_LONGTEXT( ) } |.
     endtry.
 
 endif.
 AT LINE-SELECTION.
-  data lv_fieldname type string.
-  get CURSOR FIELD lv_fieldname.
-  if lv_fieldname = 'SA38'.
-    data(bsp) = |{ appname }_bsp|.
-    SUBMIT /ui5/ui5_repository_load with ui5rep = bsp via SELECTION-SCREEN.
-    endif.
+  DATA lv_fieldname TYPE string.
+
+  GET CURSOR FIELD lv_fieldname.
+  IF lv_fieldname = 'CATALOG'.
+
+   call transaction '/UI2/FLPAM'.
+
+  ENDIF.
+ IF lv_fieldname = 'PFCG'.
+
+   call transaction 'PFCG'.
+
+  ENDIF.
+
+  IF lv_fieldname = 'SA38'.
+    DATA(bsp) = |{ appname }_bsp|.
+    SUBMIT /ui5/ui5_repository_load WITH ui5rep = bsp VIA SELECTION-SCREEN.
+  ENDIF.
