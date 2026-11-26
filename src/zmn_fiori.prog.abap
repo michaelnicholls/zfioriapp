@@ -309,9 +309,9 @@ write:  / |Files written to the { appname } folder on your Desktop |.
   write : / |You can now use |.
   write :  sa38 HOTSPOT on COLOR COL_POSITIVE.
   write: | to run /UI5/UI5_REPOSITORY_LOAD to upload a Fiori BSP app from that folder |.
-  write: / |You then need to add the app to a |.
+  write: / |You then need to add the app and tiles to a |.
   write: catalog hotspot on color col_positive.
-   write: / |Optionally, you can any tiles to a |.
+   write: / |Optionally, you can add those tiles to a |.
   write: spaces hotspot on color col_positive.
    write: / |And add the technical catalog to a role using |.
   write: pfcg hotspot on color col_positive.
