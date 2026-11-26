@@ -219,12 +219,13 @@ AT SELECTION-SCREEN OUTPUT.
    data(a) = 1.
    endif.
 START-OF-SELECTION.
-lv_entity = substring_before( val = entity sub = `/` ).
-lv_service = substring_after( val = ENTITY sub = `/` ).
+lv_service = substring_before( val = entity sub = `/` ).
+lv_entity = substring_after( val = ENTITY sub = `/` ).
 if appname is initial or binding is initial or lv_service is initial.
   write: / |Application name, binding, service, and entity set are required|.
 else.
   try.
+
 CL_GUI_FRONTEND_SERVICES=>GET_DESKTOP_DIRECTORY(
 
 CHANGING DESKTOP_DIRECTORY = LV_DESKTOP
@@ -249,7 +250,7 @@ endloop.
 "data(v) = cond string( when pa_v2 = abap_true then 'V2' else 'V4' ).
 data(s) = cond string( when PA_SIMPL = abap_true then 'S' else '' ).
 data(lo_process) = new lcl_process( ).
-data(index_html) = LO_process->DOIT( TEMPLATE = |index.html|
+data(index_html) = LO_process->doit( TEMPLATE = |index.html|
 appname = appname BINDING = lv_binding DESC = desc entity = lv_entity service = lv_service title = title
   ).
 write: / | index.html {  lines( index_html ) } |.
