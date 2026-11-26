@@ -304,12 +304,15 @@ EXPORTING FILENAME = |{ lv_desktop }\\{ appname }\\annotations\\annotation.xml|
 data(sa38) = 'SA38'.
 data(catalog) = 'Technical catalog'.
 data(pfcg) = 'PFCG'.
+data(spaces) = 'space/page'.
 write:  / |Files written to the { appname } folder on your Desktop |.
   write : / |You can now use |.
   write :  sa38 HOTSPOT on COLOR COL_POSITIVE.
   write: | to run /UI5/UI5_REPOSITORY_LOAD to upload a Fiori BSP app from that folder |.
   write: / |You then need to add the app to a |.
   write: catalog hotspot on color col_positive.
+   write: / |Optionally, you can any tiles to a |.
+  write: spaces hotspot on color col_positive.
    write: / |And add the technical catalog to a role using |.
   write: pfcg hotspot on color col_positive.
  catch cx_root into data(lx_error).
@@ -318,6 +321,11 @@ write:  / |Files written to the { appname } folder on your Desktop |.
 
 endif.
 AT LINE-SELECTION.
+       cl_http_server=>if_http_server~get_location( EXPORTING protocol     = 'HTTPS' " Or 'HTTP'
+                                                     IMPORTING host         = DATA(lv_host)
+                                                               port         = DATA(lv_port)
+                                                               out_protocol = DATA(lv_protocol) ).
+  data(sicf) = |{  to_lower( lv_protocol ) }://{ lv_host }:{ lv_port }|.
   DATA lv_fieldname TYPE string.
 
   GET CURSOR FIELD lv_fieldname.
@@ -329,6 +337,19 @@ AT LINE-SELECTION.
  IF lv_fieldname = 'PFCG'.
 
    call transaction 'PFCG'.
+
+  ENDIF.
+
+ IF lv_fieldname = 'SPACES'.
+
+
+ cl_gui_frontend_services=>execute(
+    exporting document =  |{ sicf }/sap/bc/ui2/flp?sap-system-login-oninputprocessing=onProceed&sap-client={ sy-mandt }&sap-language=EN#FLPSpace-manage|
+    exceptions others = 1
+    ).
+
+
+   "call transaction 'F4834'.
 
   ENDIF.
 
