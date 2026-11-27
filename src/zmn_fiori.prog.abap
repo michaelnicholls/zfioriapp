@@ -219,107 +219,113 @@ AT SELECTION-SCREEN OUTPUT.
    data(a) = 1.
    endif.
 START-OF-SELECTION.
-lv_service = substring_before( val = entity sub = `/` ).
-lv_entity = substring_after( val = ENTITY sub = `/` ).
-if appname is initial or binding is initial or lv_service is initial.
-  write: / |Application name, binding, service, and entity set are required|.
-else.
-  try.
+  lv_service = substring_before( val = entity
+                                 sub = `/` ).
+  lv_entity = substring_after( val = entity
+                               sub = `/` ).
+  IF appname IS INITIAL OR binding IS INITIAL OR lv_service IS INITIAL.
+    WRITE / |Application name, binding, service, and entity set are required|.
+  ELSE.
+    TRY.
 
-CL_GUI_FRONTEND_SERVICES=>GET_DESKTOP_DIRECTORY(
+        cl_gui_frontend_services=>get_desktop_directory( CHANGING desktop_directory = lv_desktop ).
+        cl_gui_cfw=>flush( ).
+        DATA lt_folders TYPE TABLE OF string.
+        lt_folders = VALUE #( ( |{ lv_desktop }\\{ appname }| )
+                              ( |{ lv_desktop }\\{ appname }\\annotations| )
+                              ( |{ lv_desktop }\\{ appname }\\i18n| ) ).
+        LOOP AT lt_folders INTO DATA(lv_folder).
+          cl_gui_frontend_services=>directory_create( EXPORTING  directory                = lv_folder
+                                                      CHANGING   rc                       = lv_rc
+                                                      EXCEPTIONS directory_already_exists = 1
+                                                                 OTHERS                   = 2 ).
+        ENDLOOP.
+        " data(v) = cond string( when pa_v2 = abap_true then 'V2' else 'V4' ).
+        DATA(s) = COND string( WHEN pa_simpl = abap_true THEN 'S' ELSE '' ).
+        DATA(lo_process) = NEW lcl_process( ).
+        DATA(index_html) = LO_process->doit( template = |index.html|
+                                             appname  = appname
+                                             binding  = lv_binding
+                                             desc     = desc
+                                             entity   = lv_entity
+                                             service  = lv_service
+                                             title    = title ).
+        WRITE / | index.html { lines( index_html ) } |.
+        DATA(i18n_properties) = lo_process->doit( template = |i18n.properties|
+                                                  appname  = appname
+                                                  binding  = lv_binding
+                                                  desc     = desc
+                                                  entity   = lv_entity
+                                                  service  = lv_service
+                                                  title    = title ).
+        WRITE / | i18n.properties { lines( i18n_properties ) } |.
+        DATA(manifest_json) = lo_process->doit( template = |{ lv_version }{ s }_manifest.json|
+                                                appname  = appname
+                                                binding  = lv_binding
+                                                desc     = desc
+                                                entity   = lv_entity
+                                                service  = lv_service
+                                                title    = title ).
+        WRITE / | manifest.json { lines( manifest_json ) } |.
+        DATA(component_js) = lo_process->doit( template = |{ lv_version }_Component.js|
+                                               appname  = appname
+                                               binding  = lv_binding
+                                               desc     = desc
+                                               entity   = lv_entity
+                                               service  = lv_service
+                                               title    = title ).
+        WRITE / | component.js { lines( component_js ) } |.
+        DATA(annotation_xml) = lo_process->doit( template = |{ lv_version }_annotation.xml|
+                                                 appname  = appname
+                                                 binding  = lv_binding
+                                                 desc     = desc
+                                                 entity   = lv_entity
+                                                 service  = lv_service
+                                                 title    = title ).
+        WRITE / | annotation.xml { lines( ANNOTAtION_XML ) } |.
 
-CHANGING DESKTOP_DIRECTORY = LV_DESKTOP
+        DATA(lv_filepath) = |{ lv_folder }\\index.html|.
 
-  ).
-cl_gui_cfw=>flush( ).
-data lt_folders type table of string.
-lt_folders  = value #(
-( |{ LV_DESKTOP }\\{ appname }| )
-( |{ LV_DESKTOP }\\{ appname }\\annotations| )
-( |{ LV_DESKTOP }\\{ appname }\\i18n| )
+        cl_gui_frontend_services=>gui_download( EXPORTING filename = |{ lv_desktop }\\{ appname }\\index.html|
+                                                          filetype = 'ASC'
+                                                CHANGING  data_tab = index_html ).
+        cl_gui_frontend_services=>gui_download(
+          EXPORTING filename = |{ lv_desktop }\\{ appname }\\i18n\\i18n.propertites|
+                    filetype = 'ASC'
+          CHANGING  data_tab = i18n_properties ).
+        cl_gui_frontend_services=>gui_download( EXPORTING filename = |{ lv_desktop }\\{ appname }\\manifest.json|
+                                                          filetype = 'ASC'
+                                                CHANGING  data_tab = manifest_json ).
+        cl_gui_frontend_services=>gui_download( EXPORTING filename = |{ lv_desktop }\\{ appname }\\Component.js|
+                                                          filetype = 'ASC'
+                                                CHANGING  data_tab = component_js ).
+        cl_gui_frontend_services=>gui_download(
+          EXPORTING filename = |{ lv_desktop }\\{ appname }\\annotations\\annotation.xml|
+                    filetype = 'ASC'
+          CHANGING  data_tab = annotation_xml ).
+        ULINE.
+        DATA(sa38) = 'SA38'.
+        DATA(catalog) = 'technical catalog'.
+        DATA(pfcg) = 'PFCG'.
+        DATA(spaces) = 'space/page'.
+        DATA(test) = 'test the BSP app'.
+        WRITE / |Files written to the { appname } folder on your Desktop |.
+        WRITE / |You can now use |.
+        WRITE sa38 HOTSPOT ON COLOR COL_POSITIVE.
+        WRITE | to run /UI5/UI5_REPOSITORY_LOAD to upload a Fiori BSP app from that folder. The suggested name is { appname }_bsp |.
+        WRITE |If you used the suggested name for the BSP app, you can  |.
+        WRITE test HOTSPOT ON COLOR COL_POSITIVE.
+        WRITE / |You then need to add the app and tiles to a |.
+        WRITE catalog HOTSPOT ON COLOR COL_POSITIVE.
+        WRITE / |Optionally, you can add those tiles to a |.
+        WRITE spaces HOTSPOT ON COLOR COL_POSITIVE.
+        WRITE / |And add the technical catalog to a role using |.
+        WRITE pfcg HOTSPOT ON COLOR COL_POSITIVE.
+      CATCH cx_root INTO DATA(lx_error).
+        WRITE / |Error  writing files { lx_error->get_longtext( ) } |.
+    ENDTRY.
 
-).
-loop at lt_folders into data(lv_folder).
-CL_GUI_FRONTEND_SERVICES=>DIRECTORY_CREATE(
-EXPORTING DIRECTORY = lv_folder
-  CHANGING rc = lv_rc
-    EXCEPTIONS DIRECTORY_ALREADY_EXISTS = 1
-      OTHERS = 2
-    ).
-endloop.
-"data(v) = cond string( when pa_v2 = abap_true then 'V2' else 'V4' ).
-data(s) = cond string( when PA_SIMPL = abap_true then 'S' else '' ).
-data(lo_process) = new lcl_process( ).
-data(index_html) = LO_process->doit( TEMPLATE = |index.html|
-appname = appname BINDING = lv_binding DESC = desc entity = lv_entity service = lv_service title = title
-  ).
-write: / | index.html {  lines( index_html ) } |.
-data(i18n_properties) = LO_PROCESS->DOIT( TEMPLATE = |i18n.properties|
-appname = appname BINDING = lv_binding DESC = desc entity = lv_entity service = lv_service title = title
- ).
-write: / | i18n.properties {  lines( I18N_PROPERTIES ) } |.
-data(manifest_json) = LO_PROCESS->DOIT( TEMPLATE = |{ lv_version }{ s }_manifest.json|
-appname = appname BINDING = lv_binding DESC = desc entity = lv_entity service = lv_service title = title
-).
-write: / | manifest.json {  lines( MANIFEST_JSON ) } |.
-data(component_js) = LO_PROCESS->DOIT( TEMPLATE = |{ lv_version }_Component.js|
-appname = appname BINDING = lv_binding DESC = desc entity = lv_entity service = lv_service title = title
-).
-write: / | component.js {  lines( COMPONENT_JS ) } |.
-data(annotation_xml) = LO_PROCESS->doit( template = |{ lv_version }_annotation.xml|
-appname = appname BINDING = lv_binding DESC = desc entity = lv_entity service = lv_service title = title
- ).
-write: / | annotation.xml {  lines( ANNOTAtION_XML ) } |.
-
-
-data(lv_filepath) = LV_FOLDER && '\index.html'.
-
-
-CL_GUI_FRONTEND_SERVICES=>GUI_DOWNLOAD(
-EXPORTING FILENAME = |{ lv_desktop }\\{ appname }\\index.html|
-  FILETYPE = 'ASC'
-  CHANGING DATA_TAB = INDEX_HTML
- ) .
-CL_GUI_FRONTEND_SERVICES=>GUI_DOWNLOAD(
-EXPORTING FILENAME = |{ lv_desktop }\\{ appname }\\i18n\\i18n.propertites|
-  FILETYPE = 'ASC'
-  CHANGING DATA_TAB = I18N_PROPERTIES
- ) .
-CL_GUI_FRONTEND_SERVICES=>GUI_DOWNLOAD(
-EXPORTING FILENAME = |{ lv_desktop }\\{ appname }\\manifest.json|
-  FILETYPE = 'ASC'
-  CHANGING DATA_TAB = MANIFEST_JSON
- ) .
-CL_GUI_FRONTEND_SERVICES=>GUI_DOWNLOAD(
-EXPORTING FILENAME = |{ lv_desktop }\\{ appname }\\Component.js|
-  FILETYPE = 'ASC'
-  CHANGING DATA_TAB = COMPONENT_JS
- ) .
-CL_GUI_FRONTEND_SERVICES=>GUI_DOWNLOAD(
-EXPORTING FILENAME = |{ lv_desktop }\\{ appname }\\annotations\\annotation.xml|
-  FILETYPE = 'ASC'
-  CHANGING DATA_TAB = ANNOTATION_XML
- ) .
-  uline.
-data(sa38) = 'SA38'.
-data(catalog) = 'Technical catalog'.
-data(pfcg) = 'PFCG'.
-data(spaces) = 'space/page'.
-write:  / |Files written to the { appname } folder on your Desktop |.
-  write : / |You can now use |.
-  write :  sa38 HOTSPOT on COLOR COL_POSITIVE.
-  write: | to run /UI5/UI5_REPOSITORY_LOAD to upload a Fiori BSP app from that folder |.
-  write: / |You then need to add the app and tiles to a |.
-  write: catalog hotspot on color col_positive.
-   write: / |Optionally, you can add those tiles to a |.
-  write: spaces hotspot on color col_positive.
-   write: / |And add the technical catalog to a role using |.
-  write: pfcg hotspot on color col_positive.
- catch cx_root into data(lx_error).
-    write: / |Error  writing files { LX_ERROR->GET_LONGTEXT( ) } |.
-    endtry.
-
-endif.
+  ENDIF.
 AT LINE-SELECTION.
        cl_http_server=>if_http_server~get_location( EXPORTING protocol     = 'HTTPS' " Or 'HTTP'
                                                      IMPORTING host         = DATA(lv_host)
@@ -344,15 +350,20 @@ AT LINE-SELECTION.
 
 
  cl_gui_frontend_services=>execute(
-    exporting document =  |{ sicf }/sap/bc/ui2/flp?sap-system-login-oninputprocessing=onProceed&sap-client={ sy-mandt }&sap-language=EN#FLPSpace-manage|
+    exporting document =  |{ sicf }/sap/bc/ui2/flp?sap-system-login-oninputprocessing=onProceed&sap-client={ sy-mandt }#FLPSpace-manage|
     exceptions others = 1
     ).
 
 
-   "call transaction 'F4834'.
-
   ENDIF.
+ IF lv_fieldname = 'TEST'.
 
+
+ cl_gui_frontend_services=>execute(
+    exporting document =  |{ sicf }/sap/bc/ui5_ui5/sap/{ appname }_bsp/index.html?sap-client={ sy-mandt }|
+    exceptions others = 1
+    ).
+endif.
   IF lv_fieldname = 'SA38'.
     DATA(bsp) = |{ appname }_bsp|.
     SUBMIT /ui5/ui5_repository_load WITH ui5rep = bsp VIA SELECTION-SCREEN.
